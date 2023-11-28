@@ -66,6 +66,7 @@ function trigger(target,key){
 
 //新增cleanup函数
 function cleanup(effectFn){
+    console.log(effectFn)
     //遍历effectFn.deps数组
     for (let i = 0; i < effectFn.deps.length; i++) {
         const deps = effectFn.deps[i];
@@ -77,8 +78,11 @@ function cleanup(effectFn){
 
 effect(function effectFn(){
     console.log("副作用函数执行")
-    document.body.innerText = obj.ok ? obj.text : "not"
+    document.body.innerText = obj.ok
 })
 
-obj.ok = false
-obj.text = "hello vue3"
+setTimeout(() => {
+    data.ok = false
+    console.log("settimeout 执行") 
+}, 1000);
+

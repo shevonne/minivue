@@ -1,5 +1,5 @@
-//桶拦截
-const bucket = new Set();
+//修改为weakmap
+const bucket = new WeakMap();
 
 //原始数据
 const data = {
@@ -16,17 +16,37 @@ function effect(fn){
 
 //get set 拦截设置
 const obj =  new Proxy(data,{
+    //拦截读取
     get(target,key){
-        if(activeEffect){
-            bucket.add(activeEffect)
+        console.log(target)
+        if(!activeEffect) return
+        let depsMap = bucket.get(target)
+        if(!depsMap){
+            bucket.set(target,(depsMap = new Map()))
         }
+        //等同于
+        // if(!depsMap){
+        //     bucket.set(target,new Map())
+        //     depsMap = new Map()
+        // }
+        let deps = depsMap.get(key)
+        if(!deps){
+            depsMap.set(key,(deps = new Set()))
+        }
+        //最后将当前激活的副作用函数添加到桶里
+        deps.add(activeEffect)
+        //返回属性值
         return target[key]
     },
+    //拦截设置
     set(target,key,newval){
         target[key] = newval
-        console.log(bucket)
-        bucket.forEach(fn => fn())
-        return true
+        const depsMap = bucket.get(target)
+        if(!depsMap) return
+        const effects = depsMap.get(key)
+        effects && effects.forEach(fn => {
+            fn()
+        });
     }
 })
 
@@ -38,6 +58,5 @@ effect(()=>{
 });
 
 setTimeout(() => {
-    obj.notExit = "hell vue3"
+    obj.text = "你好"
 }, 1000);
-

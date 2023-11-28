@@ -1,18 +1,23 @@
 //修改为weakmap
 const bucket = new WeakMap();
 
-//原始数据
-const data = {
-    text:"hello world"
-}
-
 let activeEffect
 // 副作用函数定义
 function effect(fn){
-    activeEffect = fn
-    fn()
+    const effectFn = () =>{
+        cleanup(effectFn)
+        activeEffect = effectFn
+        fn()
+    }
+    //activeEffect.deps用来存储所有与该副作用函数相关联的依赖集合
+    effectFn.deps = []
+    effectFn()
 }
 
+const data = {
+    ok:true,
+    text:"Hello world"
+}
 //get set 拦截设置
 const obj =  new Proxy(data,{
     //拦截读取
@@ -43,24 +48,37 @@ function track(target,key){
     }
     //最后将当前激活的副作用函数添加到桶里
     deps.add(activeEffect)
+    //添加到activeEffect.deps中
+    activeEffect.deps.push(deps)
 }
 //set触发函数 tigger
 function trigger(target,key){
     const depsMap = bucket.get(target)
     if(!depsMap) return
     const effects = depsMap.get(key)
-    effects && effects.forEach(fn => {
-        fn()
-    });
+    //无限循环问题
+    // effects && effects.forEach(fn => {
+    //     fn()
+    // });
+    const effectsToRun = new Set(effects)
+    effectsToRun.forEach(effectFn => effectFn())
 }
 
-//使用
-//问题：会两次执行  没有建立obj明确的联系
-effect(()=>{
-    console.log("effect run ")
-    document.body.innerText = obj.text
-});
+//新增cleanup函数
+function cleanup(effectFn){
+    //遍历effectFn.deps数组
+    for (let i = 0; i < effectFn.deps.length; i++) {
+        const deps = effectFn.deps[i];
+        deps.delete(effectFn)
+    }
+    //重置数组
+    effectFn.deps.length = 0
+}
 
-setTimeout(() => {
-    obj.text = "你好"
-}, 1000);
+effect(function effectFn(){
+    console.log("副作用函数执行")
+    document.body.innerText = obj.ok ? obj.text : "not"
+})
+
+obj.ok = false
+obj.text = "hello vue3"

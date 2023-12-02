@@ -3,20 +3,21 @@ const bucket = new WeakMap();
 
 let activeEffect
 //effect栈 
-const effectStack = [] //新增
+const effectStack = [] 
 // 副作用函数定义
-function effect(fn){
+function effect(fn,options={}){
     const effectFn = () =>{
         cleanup(effectFn)
         //如果是嵌套函数  这里只能保留一个内部函数 引发问题
         activeEffect = effectFn
         //在调用副作用函数之前将当前副作用函数压入栈中
-        effectStack.push(effectFn) //新增
+        effectStack.push(effectFn) 
         fn()
         //在当前副作用函数执行完毕之后，将当前副作用函数弹出栈，并把activeEffect还原为之前的值
         effectStack.pop();
-        activeEffect = effectStack[effectStack.length - 1] //新增
+        activeEffect = effectStack[effectStack.length - 1] 
     }
+    effectFn.options = options
     //activeEffect.deps用来存储所有与该副作用函数相关联的依赖集合
     effectFn.deps = []
     effectFn()
@@ -69,6 +70,13 @@ function trigger(target,key){
     //     fn()
     // });
     const effectsToRun = new Set(effects)
+    //解决obj.foo ++ 引发的无限递归问题
+    //判断如果trigger触发执行的副作用函数与当前相同，则不添加到执行队列中
+    effects && effects.forEach(effectFn =>{
+        if(effectFn != activeEffect){
+            effectsToRun.add(effectFn)
+        }
+    })
     effectsToRun.forEach(effectFn => effectFn())
 }
 
@@ -84,13 +92,13 @@ function cleanup(effectFn){
     effectFn.deps.length = 0
 }
 
-let temp1,temp2
-effect(function effectFn1(){
-    console.log("effectFn1 执行")
-    effect(function effectFn2(){
-        console.log("effectFn2 执行")
-        temp2 = obj.bar
-    })
-    temp1 = obj.foo
-    // console.log(activeEffect.deps)
-})
+effect(()=>{
+    console.log(obj.foo)
+},
+//options
+{
+    scheduler(fn){
+
+    }
+}
+)

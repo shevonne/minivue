@@ -2,12 +2,20 @@
 const bucket = new WeakMap();
 
 let activeEffect
+//effect栈 
+const effectStack = [] //新增
 // 副作用函数定义
 function effect(fn){
     const effectFn = () =>{
         cleanup(effectFn)
+        //如果是嵌套函数  这里只能保留一个内部函数 引发问题
         activeEffect = effectFn
+        //在调用副作用函数之前将当前副作用函数压入栈中
+        effectStack.push(effectFn) //新增
         fn()
+        //在当前副作用函数执行完毕之后，将当前副作用函数弹出栈，并把activeEffect还原为之前的值
+        effectStack.pop();
+        activeEffect = effectStack[effectStack.length - 1] //新增
     }
     //activeEffect.deps用来存储所有与该副作用函数相关联的依赖集合
     effectFn.deps = []
@@ -15,8 +23,8 @@ function effect(fn){
 }
 
 const data = {
-    ok:true,
-    text:"Hello world"
+    foo:true,
+    bar:true
 }
 //get set 拦截设置
 const obj =  new Proxy(data,{
@@ -66,7 +74,7 @@ function trigger(target,key){
 
 //新增cleanup函数
 function cleanup(effectFn){
-    console.log(effectFn)
+    // console.log(effectFn)
     //遍历effectFn.deps数组
     for (let i = 0; i < effectFn.deps.length; i++) {
         const deps = effectFn.deps[i];
@@ -76,13 +84,13 @@ function cleanup(effectFn){
     effectFn.deps.length = 0
 }
 
-effect(function effectFn(){
-    console.log("副作用函数执行")
-    document.body.innerText = obj.ok
+let temp1,temp2
+effect(function effectFn1(){
+    console.log("effectFn1 执行")
+    effect(function effectFn2(){
+        console.log("effectFn2 执行")
+        temp2 = obj.bar
+    })
+    temp1 = obj.foo
+    // console.log(activeEffect.deps)
 })
-
-setTimeout(() => {
-    data.ok = false
-    console.log("settimeout 执行") 
-}, 1000);
-

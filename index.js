@@ -154,3 +154,52 @@ const sumRes = computed(()=>obj.foo + obj.bar)
 console.log(sumRes.value)
 obj.foo++
 console.log(sumRes.value)
+
+//watch 
+function watch(source,cb){
+    //定义getter
+    let getter
+    if(typeof source === "function"){
+        getter = source
+    }else{
+        getter = () => traverse(source)
+    }
+    //定义新值与旧值
+    let oldValue,newValue
+    const effectFn = effect(
+        ()=> getter(),
+        {
+            lazy:true,
+            scheduler(){
+                //重新执行副作用函数，得到新值
+                newValue = effectFn()
+                //数据变化时，调用回调函数
+                cb(newValue,oldValue)
+                //更新旧值
+                oldValue = newValue
+            }
+        }
+    )
+    //手动调用副作用函数，拿到旧值
+    oldValue = effectFn()
+}
+function traverse(value,seen = new Set()){
+    if(typeof value !== "object" || value === null || seen.has(value)) return
+    seen.add(value)
+    //读取value对象 暂不考虑数组
+    for(const k in value){
+        console.log("loop",value[k])
+        traverse(value[k],seen)
+    }
+    return value 
+}
+//使用
+watch(
+    //getter函数
+    ()=> obj.foo,
+    //回调函数
+    ()=>{
+        console.log("obj.foo的值变了")
+    }
+)
+obj.bar ++

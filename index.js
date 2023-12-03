@@ -12,20 +12,27 @@ function effect(fn,options={}){
         activeEffect = effectFn
         //在调用副作用函数之前将当前副作用函数压入栈中
         effectStack.push(effectFn) 
-        fn()
+        //存储fn的执行结果
+        const res = fn()  
         //在当前副作用函数执行完毕之后，将当前副作用函数弹出栈，并把activeEffect还原为之前的值
         effectStack.pop();
         activeEffect = effectStack[effectStack.length - 1] 
+        return res //新增
     }
     effectFn.options = options
     //activeEffect.deps用来存储所有与该副作用函数相关联的依赖集合
     effectFn.deps = []
-    effectFn()
+    //处理lazy
+    if(!options.lazy){
+        effectFn()
+    }
+    //返回副作用函数
+    return effectFn
 }
 
 const data = {
-    foo:true,
-    bar:true
+    foo:1,
+    bar:3
 }
 //get set 拦截设置
 const obj =  new Proxy(data,{
@@ -99,13 +106,32 @@ function cleanup(effectFn){
     effectFn.deps.length = 0
 }
 
-effect(()=>{
-    console.log(obj.foo)
-},
-//options
-{
-    scheduler(fn){
-        setTimeout(fn)
+// const effectFn = effect(()=>
+//     obj.foo + obj.bar,
+//     //options
+//     {
+//         lazy:true
+//     }
+// )
+
+//手动执行副作用函数 value是getter的返回值
+// const value = effectFn()
+
+//实现computed
+function computed(getter){
+    const effectFn = effect(getter,{
+        lazy:true
+    })
+
+    const obj = {
+        //只有当读取value时才执行effctFn
+        get value(){
+            return effectFn()
+        }
     }
+
+    return obj
 }
-)
+
+const sumRes = computed(()=>obj.foo + obj.bar)
+console.log(sumRes.value)

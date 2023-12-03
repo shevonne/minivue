@@ -77,7 +77,14 @@ function trigger(target,key){
             effectsToRun.add(effectFn)
         }
     })
-    effectsToRun.forEach(effectFn => effectFn())
+    effectsToRun.forEach(effectFn => {
+        //判断options是否存在 传递参数
+        if(effectFn.options.scheduler){    
+            effectFn.options.scheduler(effectFn)
+        }else{
+            effectFn()
+        }
+    })
 }
 
 //新增cleanup函数
@@ -98,7 +105,7 @@ effect(()=>{
 //options
 {
     scheduler(fn){
-
+        setTimeout(fn)
     }
 }
 )

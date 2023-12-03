@@ -17,7 +17,7 @@ function effect(fn,options={}){
         //在当前副作用函数执行完毕之后，将当前副作用函数弹出栈，并把activeEffect还原为之前的值
         effectStack.pop();
         activeEffect = effectStack[effectStack.length - 1] 
-        return res //新增
+        return res 
     }
     effectFn.options = options
     //activeEffect.deps用来存储所有与该副作用函数相关联的依赖集合

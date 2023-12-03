@@ -119,19 +119,38 @@ function cleanup(effectFn){
 
 //实现computed
 function computed(getter){
+    //缓存上一次计算值
+    let value
+    //标记是否需要计算  true为需要重新计算
+    let dirty = true
     const effectFn = effect(getter,{
-        lazy:true
-    })
+            lazy:true,
+            scheduler(){
+                if(!dirty){
+                    dirty = true
+                    //当计算属性依赖的响应式数据变化时，手动调用trigger函数触发响应
+                    trigger(obj,"value")
+                }
+            }
+        }
+    )
 
     const obj = {
         //只有当读取value时才执行effctFn
         get value(){
-            return effectFn()
+            if(dirty){
+                value = effectFn()
+                dirty = false
+            }
+            //当读取value时，手动调用track函数进行追踪
+            track(obj,"value")
+            return value
         }
     }
-
     return obj
 }
 
 const sumRes = computed(()=>obj.foo + obj.bar)
+console.log(sumRes.value)
+obj.foo++
 console.log(sumRes.value)
